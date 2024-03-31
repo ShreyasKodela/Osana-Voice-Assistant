@@ -1,0 +1,148 @@
+import os
+import sys
+import speech_recognition as sr
+import openai
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QTextEdit, QVBoxLayout, QLabel
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt
+
+os.environ['OPENAI_API_KEY'] = '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'
+
+def recognize_speech():
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Listening...")
+        audio = recognizer.listen(source)
+        try:
+            text = recognizer.recognize_google(audio)
+            print(f"You said: {text}")
+            return text
+        except sr.UnknownValueError:
+            print("Could not understand audio")
+            return None
+        except sr.RequestError as e:
+            print(f"Could not request results; {e}")
+            return None
+
+def get_openai_response(question):
+    openai.api_key = os.getenv('OPENAI_API_KEY')
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": question},
+        ]
+    )
+    return response.choices[0].message['content']
+
+class WelcomeScreen(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle('Welcome')
+        self.setGeometry(300, 300, 1800, 1200)
+        
+        self.setStyleSheet("""
+        QWidget {
+            background-color: #282a36;
+            color: #f8f8f2;
+        }
+        QPushButton {
+            background-color: #50fa7b;
+            border-radius: 10px;
+            padding: 30px;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #64ff86;
+        }
+        QLabel {
+            font-size: 64px;
+            padding: 10px;
+            text-align: center;              
+        }
+        """)
+
+        layout = QVBoxLayout()
+
+        label = QLabel("Hi, My name is Osana, your virtual voice assistant.\n"
+                       "You can ask me anything, and I will respond based on the knowledge I have.\n"
+                       "Click Start below to begin chatting!")
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+
+        button = QPushButton('Start')
+        button.clicked.connect(self.startVoiceAssistant)
+        layout.addWidget(button)
+
+        self.setLayout(layout)
+
+    def startVoiceAssistant(self):
+        self.close()
+        self.voiceAssistant = VoiceAssistantGUI()
+        self.voiceAssistant.show()
+
+
+class VoiceAssistantGUI(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle('Osana Voice Assistant')
+        self.setGeometry(300, 300, 1800, 1200)
+        self.setStyleSheet("""
+        QWidget {
+            background-color: #282a36;
+            color: #f8f8f2;
+        }
+        QPushButton {
+            background-color: #50fa7b;
+            border-radius: 10px;
+            padding: 30px;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #64ff86;
+        }
+        QTextEdit {
+            background-color: #44475a;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 48px;
+            color: #f8f8f2;
+        }""")
+
+        layout = QVBoxLayout()
+
+        self.textEdit = QTextEdit()
+        self.textEdit.setFont(QFont('Times', 48))
+        self.textEdit.setReadOnly(True)
+
+        self.button = QPushButton('Speak')
+        self.button.setFont(QFont('Times', 32))
+        self.button.clicked.connect(self.handle_button_click)
+
+        layout.addWidget(self.textEdit)
+        layout.addWidget(self.button)
+
+        self.setLayout(layout)
+
+    def handle_button_click(self):
+        question = recognize_speech()
+        if question:
+            response = get_openai_response(question)
+            current_text = self.textEdit.toPlainText()
+            new_text = f"{current_text}\nQ: {question}\nA: {response}\n"
+            self.textEdit.setText(new_text)
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    welcomeScreen = WelcomeScreen()
+    welcomeScreen.show()
+    sys.exit(app.exec_())
