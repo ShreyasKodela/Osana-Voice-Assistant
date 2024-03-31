@@ -1,7 +1,3 @@
-﻿# Osana-Voice-Assistant
-
-Here's a template for your README file that you can use as a starting point. Feel free to customize it to better suit your project and personality:
-
 ---
 
 # Voice Assistant - Osana
